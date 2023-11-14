@@ -1,0 +1,6 @@
+Pillow
+requests
+imagehash
+argparse
+torch 
+torchvision
