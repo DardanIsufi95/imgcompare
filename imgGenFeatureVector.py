@@ -19,8 +19,8 @@ if image_path is None:
         "error" : "No image path provided"
     }))
 
-model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
-#model = models.vgg16(weights=models.VGG16_Weights.DEFAULT)
+#model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+model = models.vgg16(weights=models.VGG16_Weights.DEFAULT)
 model.eval()  
 
 # Define image transformations

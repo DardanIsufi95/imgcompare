@@ -5,7 +5,8 @@ const path = require('path');
 const {spawn} = require('child_process');
 const fs = require('fs');
 
-const PYTHON_NAME = 'python3';
+
+const PYTHON_NAME = process.env.PYTHON_NAME || 'python';
 
 const imgGenHash = (filename) => new Promise((resolve, reject) => {
     const script = spawn(PYTHON_NAME, ['imgGenHash.py', '--image', filename]);
@@ -81,9 +82,13 @@ function XOR_BIT_COUNT(a , b){
 }
 
 function IMG_HASH_DISTANCE(a , b){
+
+    const bias = [1 , 1 , 1]
+
+
     let distance = 0;
     for(let i = 0 ; i < a.length ; i++){
-        distance += XOR_BIT_COUNT(a[i] , b[i])
+        distance += XOR_BIT_COUNT(a[i] , b[i]) * bias[i];
     }
     return distance;
 }
@@ -129,7 +134,7 @@ const storage = multer.diskStorage({
         let filename = crypto.randomUUID().replace(/\-/g, '') + path.extname(file.originalname)
       
         cb(null, filename);
-        req.filename = 'uploads/' + filename;
+        req.filename = 'uploads/' + file.originalname;
     },
     
 });
@@ -144,9 +149,9 @@ app.post('/uploads', upload.single('image'), async (req, res ,next) => {
         const hash = [result.ahash,result.phash,result.dhash];
 
 
-        // SELECT * FROM TABLE WHERE BIT_COUNT(hash ^ 0x1234567890) > X
+        // SELECT * FROM TABLE WHERE BIT_COUNT(hash ^ 0x1234567890) * 0.1  > X
         const hashMatches = DB.filter((item) => {
-            return IMG_HASH_DISTANCE(hash ,item.hash ) < 80;
+            return IMG_HASH_DISTANCE(hash ,item.hash ) > 0;
         });
         
         
@@ -154,7 +159,7 @@ app.post('/uploads', upload.single('image'), async (req, res ,next) => {
 
 
         const featureVectorMatches = hashMatches.filter((item) => {
-            return cosineSimilarity(featureVector ,item.featureVector ) > 0.9;
+            return cosineSimilarity(featureVector ,item.featureVector ) > 1; 
         });
 
         
@@ -183,8 +188,36 @@ app.post('/uploads', upload.single('image'), async (req, res ,next) => {
     }
 });
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.post('/test', async (req, res) => {
+    const img1 = req.body.img1;
+    const img2 = req.body.img2;
+
+    const [img1_hash, img2_hash] = await  Promise.all([imgGenHash(img1 ),imgGenHash(img2) ] ) ;
+
+    const [img1_vectors, img2_vectors] = await Promise.all( [imgGenFeatureVector(img1) , imgGenFeatureVector(img2)] ) ;
+
+    console.log(img1_hash, img2_hash);
+    console.log(img1_vectors, img2_vectors);
+    const hash_distance = IMG_HASH_DISTANCE(img1_hash , img2_hash);
+    const feature_vector_distance = cosineSimilarity(img1_vectors , img2_vectors);
+
+
+    console.log('hash_substract : ' , hash_distance);
+    console.log('feature_vector_substract : ' , feature_vector_distance);
+
+    res.json({
+        hash_distance ,
+        feature_vector_distance
+    });
+});
+
 
 app.use('/uploads' , express.static('uploads'));
+
+
 
 app.use((err, req, res, next) => {
     console.log(err);

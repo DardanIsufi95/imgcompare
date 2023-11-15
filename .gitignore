@@ -4,8 +4,6 @@ node_modules/
 # Build directory
 dist/
 
-# Uploads directory
-uploads/
 
 
 # Environment variables
