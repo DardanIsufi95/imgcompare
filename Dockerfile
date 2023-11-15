@@ -18,7 +18,7 @@ RUN npm install
 
 COPY . ./
 
-VOLUME /app/uploads
+RUN mkdir -p /app/uploads
 
 EXPOSE 3000
 
