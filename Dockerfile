@@ -20,6 +20,7 @@ COPY . ./
 
 RUN mkdir -p /app/uploads
 
+
 EXPOSE 3000
 
 ENTRYPOINT [ "node" , "index" ]

@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const path = require('path');
 const {spawn} = require('child_process');
 const fs = require('fs');
+const bodyParser = require('body-parser');
 
 
 const PYTHON_NAME = process.env.PYTHON_NAME || 'python';
@@ -83,7 +84,7 @@ function XOR_BIT_COUNT(a , b){
 
 function IMG_HASH_DISTANCE(a , b){
 
-    const bias = [1 , 1 , 1]
+    const bias = [1 , 1 , 1 ,1 ,1 ,1 ,1]
 
 
     let distance = 0;
@@ -144,14 +145,15 @@ const upload = multer({ storage: storage, preservePath: true });
 app.post('/uploads', upload.single('image'), async (req, res ,next) => {
     try {
 
-
+        console.log(req.file);
+        
         const result = await imgGenHash(req.file.path);
         const hash = [result.ahash,result.phash,result.dhash];
 
 
         // SELECT * FROM TABLE WHERE BIT_COUNT(hash ^ 0x1234567890) * 0.1  > X
         const hashMatches = DB.filter((item) => {
-            return IMG_HASH_DISTANCE(hash ,item.hash ) > 0;
+            return IMG_HASH_DISTANCE(hash ,item.hash ) < 100;
         });
         
         
@@ -159,7 +161,7 @@ app.post('/uploads', upload.single('image'), async (req, res ,next) => {
 
 
         const featureVectorMatches = hashMatches.filter((item) => {
-            return cosineSimilarity(featureVector ,item.featureVector ) > 1; 
+            return cosineSimilarity(featureVector ,item.featureVector ) > 9.5; 
         });
 
         
@@ -188,20 +190,23 @@ app.post('/uploads', upload.single('image'), async (req, res ,next) => {
     }
 });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
 
 app.post('/test', async (req, res) => {
     const img1 = req.body.img1;
     const img2 = req.body.img2;
+    console.log(img1 , img2);   
+    const [img1_hash, img2_hash,img1_vectors, img2_vectors] = await  Promise.all([imgGenHash(img1 ),imgGenHash(img2),imgGenFeatureVector(img1) , imgGenFeatureVector(img2) ] ) ;
 
-    const [img1_hash, img2_hash] = await  Promise.all([imgGenHash(img1 ),imgGenHash(img2) ] ) ;
 
-    const [img1_vectors, img2_vectors] = await Promise.all( [imgGenFeatureVector(img1) , imgGenFeatureVector(img2)] ) ;
 
     console.log(img1_hash, img2_hash);
     console.log(img1_vectors, img2_vectors);
-    const hash_distance = IMG_HASH_DISTANCE(img1_hash , img2_hash);
+    const hash_distance = IMG_HASH_DISTANCE(Object.values(img1_hash) , Object.values(img2_hash));
     const feature_vector_distance = cosineSimilarity(img1_vectors , img2_vectors);
 
 
@@ -209,7 +214,10 @@ app.post('/test', async (req, res) => {
     console.log('feature_vector_substract : ' , feature_vector_distance);
 
     res.json({
-        hash_distance ,
+        hash_distance : `${hash_distance}/${Object.values(img1_hash).length*64}`  ,
+        hash_distance_seperate: Object.keys(img1_hash).map((key , index) => {
+            return `${key} : ${IMG_HASH_DISTANCE([img1_hash[key]] , [img2_hash[key]])}/${64}`
+        } ),
         feature_vector_distance
     });
 });
