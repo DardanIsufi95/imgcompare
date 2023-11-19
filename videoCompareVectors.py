@@ -1,4 +1,14 @@
 import numpy as np
+import json
+
+
+import argparse
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--needle', type=str , required=True)
+parser.add_argument('--haystack', type=str , required=True )
+parser.add_argument('--threshold', type=float , default=0.95)
 
 def cosine_similarity(vec1, vec2):
     return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
@@ -37,7 +47,7 @@ def find_longest_consistent_match(needle_frames, haystack_frames, similarity_thr
                             'haystack_start_index': start_index_haystack,
                             'haystack_end_index': start_index_haystack + current_match_length - 1,
                             'match_length': current_match_length,
-                            'frame_similarities': frame_similarities,
+                            'frame_similarities': [float(sim) for sim in frame_similarities],
                             'similarity_threshold': similarity_threshold,
                             'average_similarity': sum(frame_similarities) / len(frame_similarities)
                         })
@@ -65,14 +75,18 @@ def explain_results(match_result):
     return explanation
 
 if __name__ == "__main__":
-    haystack_video = 'uploads/video/mov5.mp4'
-    needle_video = 'uploads/video/mov5_15_30s.mp4'
+
+    args = parser.parse_args()
+
+    haystack_video = args.haystack
+    needle_video = args.needle
+    similarity_threshold = args.threshold
 
     haystack_video_vectors = np.load(haystack_video + '.npy')
     needle_video_vectors = np.load(needle_video + '.npy')
 
-    similarity_threshold = 0.85  # Define your similarity threshold
 
     result = find_longest_consistent_match(needle_video_vectors, haystack_video_vectors, similarity_threshold)
-    print(explain_results(result))
-    [ print(f"{n}") for n in result.get('frame_similarities',[]) ]
+    print(json.dumps(result, indent=4 , sort_keys=False))
+    #print(explain_results(result))
+    #[ print(f"{n}") for n in result.get('frame_similarities',[]) ]

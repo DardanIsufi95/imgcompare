@@ -87,6 +87,32 @@ const videoGenVectors = (filename , gropSize = 1) => new Promise((resolve, rejec
     });
 });
 
+const videoCompareVectors = (needle , haystack , threshold) => new Promise((resolve, reject) => {
+    const script = spawn(PYTHON_NAME, ['videoCompareVectors.py', '--needle', needle , '--haystack', haystack , '--threshold', threshold ]);
+
+    let stdoutData = '';
+    script.stdout.on('data', (data) => {
+        stdoutData += data.toString();
+    });
+
+    let stderrData = '';
+    script.stderr.on('data', (data) => {
+        stderrData += data.toString();
+    });
+
+    script.on('close', (code) => {
+        if (code === 0) {
+            resolve(JSON.parse(stdoutData));
+        } else {
+            reject(new Error(`Process exited with code ${code}: ${stderrData}`));
+        }
+    });
+
+    script.on('error', (error) => {
+        reject(error);
+    });
+});
+
 const app = express();
 
 function XOR_BIT_COUNT(a , b){
@@ -222,9 +248,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 
-app.post('/test', async (req, res) => {
-    const img1 = req.body.img1;
-    const img2 = req.body.img2;
+app.post('/test-image', async (req, res) => {
+    const img1 = `uploads/image/${req.body.img1}`;
+    const img2 = `uploads/image/${req.body.img2}` ;
     console.log(img1 , img2);   
     const [img1_hash, img2_hash,img1_vectors, img2_vectors] = await  Promise.all([imgGenHash(img1 ),imgGenHash(img2),imgGenFeatureVector(img1) , imgGenFeatureVector(img2) ] ) ;
 
@@ -249,8 +275,8 @@ app.post('/test', async (req, res) => {
 });
 
 
-app.post('/test2', async (req, res) => {
-    const video = req.body.video;
+app.post('/generate-video-vectors', async (req, res) => {
+    const video = `uploads/video/${req.body.video}`;
     const groupSize = req.body.groupSize;
 
     console.log(video);
@@ -259,9 +285,23 @@ app.post('/test2', async (req, res) => {
 
     console.log(video_hash);
 
-    res.json({
-        video_hash
-    });
+    res.json(video_hash);
+});
+
+app.post('/test-video', async (req, res) => {
+    const needle_video = `uploads/video/${req.body.needle}`;
+    const haystack_video = `uploads/video/${req.body.haystack}`;
+    const threshold = req.body.threshold;
+
+    console.log(needle_video , haystack_video , threshold || 0.95) ;
+
+    const result = await videoCompareVectors(needle_video , haystack_video , threshold || 0.95);
+
+    console.log(result);
+
+    res.json(result);
+
+
 });
 
 app.use('/uploads' , express.static('uploads'));
