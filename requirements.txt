@@ -3,4 +3,5 @@ requests
 imagehash
 argparse
 torch 
+opencv-python
 torchvision

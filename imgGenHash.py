@@ -12,16 +12,16 @@ args = parser.parse_args()
 def generate_hashes(image_path):
     img = Image.open(image_path)
     hashes = {
-        "ahash" : '0b'+bin(int(str(imagehash.average_hash(img)),16)).strip("0b").zfill(64) ,
-        "phash" : '0b'+bin(int(str(imagehash.phash(img)) ,16)).strip("0b").zfill(64),
-        "dhash" : '0b'+bin(int(str(imagehash.dhash(img)) ,16)).strip("0b").zfill(64),
-        "whash" : '0b'+bin(int(str(imagehash.whash(img)) ,16)).strip("0b").zfill(64),
-        "chash" : '0b'+bin(int(str(imagehash.colorhash(img)) ,16)).strip("0b").zfill(64)
+        "ahash" : str(imagehash.average_hash(img)) ,
+        "phash" : str(imagehash.phash(img)) ,
+        "dhash" : str(imagehash.dhash(img)) ,
+        "whash" : str(imagehash.whash(img)),
+        "chash" : str(imagehash.colorhash(img)) 
         
     }
     return hashes
 
-
+    
 image_path = args.image
 
 if image_path is None:

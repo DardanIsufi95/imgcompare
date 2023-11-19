@@ -30,7 +30,7 @@ const imgGenHash = (filename) => new Promise((resolve, reject) => {
         }
     });
 
-    process.on('error', (error) => {
+    script.on('error', (error) => {
         reject(error);
     });
 });
@@ -56,7 +56,33 @@ const imgGenFeatureVector = (filename) => new Promise((resolve, reject) => {
         }
     });
 
-    process.on('error', (error) => {
+    script.on('error', (error) => {
+        reject(error);
+    });
+});
+
+const videoGenVectors = (filename , gropSize = 1) => new Promise((resolve, reject) => {
+    const script = spawn(PYTHON_NAME, ['videoGenVectors.py', '--group-size', gropSize , '--progress', 'false', '--video', filename ]);
+
+    let stdoutData = '';
+    script.stdout.on('data', (data) => {
+        stdoutData += data.toString();
+    });
+
+    let stderrData = '';
+    script.stderr.on('data', (data) => {
+        stderrData += data.toString();
+    });
+
+    script.on('close', (code) => {
+        if (code === 0) {
+            resolve(JSON.parse(stdoutData));
+        } else {
+            reject(new Error(`Process exited with code ${code}: ${stderrData}`));
+        }
+    });
+
+    script.on('error', (error) => {
         reject(error);
     });
 });
@@ -222,6 +248,21 @@ app.post('/test', async (req, res) => {
     });
 });
 
+
+app.post('/test2', async (req, res) => {
+    const video = req.body.video;
+    const groupSize = req.body.groupSize;
+
+    console.log(video);
+
+    const video_hash = await videoGenVectors(video , groupSize || 1);
+
+    console.log(video_hash);
+
+    res.json({
+        video_hash
+    });
+});
 
 app.use('/uploads' , express.static('uploads'));
 
